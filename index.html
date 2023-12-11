@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IndexedDB</title>
+</head>
+<body>
+    <h1>IndexedDB Table</h1>
+    
+    <div>
+        <label for="idInput">ID:</label>
+        <input type="text" id="idInput">
+        <label for="titleInput">Title:</label>
+        <input type="text" id="titleInput">
+        <button onclick="saveItem()">Добавить запись</button>
+        <button onclick="updateItem()">Изменить запись</button>
+        <button onclick="deleteItem()">Удалить запись</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Title</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody">
+            
+        </tbody>
+    </table>
+    <script>
+    let db;
+
+const dbName = 'myDatabase';
+const tableName = 'myTable';
+const dbVersion = 1;
+
+const request = window.indexedDB.open(dbName, dbVersion);
+
+request.onupgradeneeded = function(event) {
+    const db = event.target.result;
+    const objectStore = db.createObjectStore(tableName, { keyPath: 'id', autoIncrement: true });
+};
+
+request.onsuccess = function(event) {
+    db = event.target.result;
+    console.log('Database успешно открыта');
+    updateTable();
+};
+
+request.onerror = function(event) {
+    console.error('Database error: ' + event.target.errorCode);
+};
+
+function updateTable() {
+    const objectStore = db.transaction(tableName).objectStore(tableName);
+    const tableBody = document.querySelector('tbody');
+    tableBody.innerHTML = '';
+
+    objectStore.openCursor().onsuccess = function(event) {
+        const cursor = event.target.result;
+        if (cursor) {
+            const newRow = document.createElement('tr');
+            newRow.innerHTML = `
+                <td contentEditable='true'>${cursor.value.id}</td>
+                <td contentEditable='true'>${cursor.value.title}</td>
+                <td>
+                    <span class='action' onclick='updateItem(${cursor.value.id})'>Изменить</span>
+                    <span class='action' onclick='deleteItem(${cursor.value.id})'>Удалить</span>
+                </td>
+            `;
+            tableBody.appendChild(newRow);
+            cursor.continue();
+        }
+    };
+}
+
+// Ваш JavaScript-код
+function saveItem() {
+    const id = document.getElementById('idInput').value;
+    const title = document.getElementById('titleInput').value;
+    
+    const transaction = db.transaction([tableName], 'readwrite');
+    const objectStore = transaction.objectStore(tableName);
+
+    const newItem = { id: id, title: title };
+    const request = objectStore.add(newItem);
+
+    request.onsuccess = function(event) {
+        alert('Запись успешно добавлена');
+        updateTable();
+    };
+
+    request.onerror = function(event) {
+        alert('Ошибка при добавлении записи');
+    };
+}
+
+function updateItem() {
+    const id = document.getElementById('idInput').value;
+    
+    const transaction = db.transaction([tableName], 'readwrite');
+    const objectStore = transaction.objectStore(tableName);
+
+    const updatedItem = { id: id, title: 'Updated Title' };
+    const request = objectStore.put(updatedItem);
+
+    request.onsuccess = function(event) {
+        alert('Запись успешно изменена');
+        updateTable();
+    };
+
+    request.onerror = function(event) {
+        alert('Ошибка при измененеии записи');
+    };
+}
+
+function deleteItem() {
+    const id = document.getElementById('idInput').value;
+    
+    const transaction = db.transaction([tableName], 'readwrite');
+    const objectStore = transaction.objectStore(tableName);
+
+    const request = objectStore.delete(id);
+
+    request.onsuccess = function(event) {
+        alert('Запись успешно удалена');
+        updateTable();
+    };
+
+    request.onerror = function(event) {
+        alert('Ошибка при удалении записи');
+    };
+}
+
+
+
+    </script>
+</body>
+</html>
